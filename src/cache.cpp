@@ -53,6 +53,7 @@ int main(){
 	}
 
 	inFile >> cache_size >> block_size >> associativity >> algorithm;
+	cache_size = cache_size * 1024;
 	while(!inFile.eof()){
 		inFile >> data;		  
 		input.push_back(stoull(data,nullptr,0));
@@ -60,27 +61,30 @@ int main(){
 	}
 
 	index_bits = calculate_index(cache_size,block_size);
-	offset = calculate_wordSet(block_size) + 2; //WO + BO
+	offset = calculate_wordSet(block_size); //WO + BO
 	index = cache_size / block_size;
-	cout << "The index is " << offset << endl;
+	cout << "The index is " << index_bits << endl;
 	
-
-	int cache[index] = {0};
+	int cache[index];
+	for(int i=0;i<index;i++)
+		cache[i] = -1;
 	
 	for(int i=0;i<counter;i++){	
 		int blockAddress = get_blockAddress(input[i],offset);
-		if(cache[blockAddress % index] != 0){
+		if(cache[blockAddress % index] == -1){
 			cout << -1 << endl;
 			cache[blockAddress % index] = get_tag(input[i],offset,index_bits);
 		}
-		else{
-			
+		else if(cache[blockAddress % index] == get_tag(input[i],offset,index_bits))
+		{
+			cout << -1 << endl;			
+		}
+		else if(cache[blockAddress % index] != get_tag(input[i],offset,index_bits)){						
+			cout <<  std::dec << cache[blockAddress % index] << endl;
 			cache[blockAddress % index] = get_tag(input[i],offset,index_bits);
-			cout <<  cache[blockAddress % index] << endl;
 		}
 	}
 	
-
 	// //Print out for checking
     // cout << cache_size << endl << block_size << endl << associativity << endl << algorithm << endl;
 	// for(int i=0;i<counter;i++){
