@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <bitset>
+#include <algorithm>
 
 using namespace std;
 
@@ -29,28 +30,38 @@ int calculate_index(int cache_size,int block_size){
 int calculate_wordSet(int block_size){
 	int wordSet=0;;
 	while(block_size != 1){
+
 		block_size = block_size / 2;
 		wordSet++;
 	}
 	return wordSet;
 }
 
-int main(){
+
+
+int main(int argc,char *argv[]){
 	vector <unsigned> input;
 	string data;
-	int counter=0,width=32;
+	int counter=0,width=32,checking_counter=0;	
+	int x;
 	int cache_size,block_size;
 	int associativity,algorithm;
-	int tag,index,offset,index_bits;	
+	int tag,index,offset,index_bits;
+	int blockAddress,tagValue,blockNum;	
+	double missRate=0;
 
 	ifstream inFile;
-	inFile.open("./src/trace1.txt");
-
+	ofstream outFile;
+	inFile.open("trace1.txt"); //./src/trace1.txt  
+	outFile.open("trace1.out");
 	//Check for error
 	if(inFile.fail()){
 		cout << "Error Opening File" << endl;
 		exit(1);
 	}
+	for(int i =0;i<argc;i++)
+		cout << argv[i] << " ";
+	cout << endl;
 
 	inFile >> cache_size >> block_size >> associativity >> algorithm;
 	cache_size = cache_size * 1024;
@@ -59,41 +70,176 @@ int main(){
 		input.push_back(stoull(data,nullptr,0));
 		counter++;		
 	}
-
+	//Initial
 	index_bits = calculate_index(cache_size,block_size);
 	offset = calculate_wordSet(block_size); //WO + BO
 	index = cache_size / block_size;
-	cout << "The index is " << index_bits << endl;
-	
-	int cache[index];
-	for(int i=0;i<index;i++)
-		cache[i] = -1;
-	
-	for(int i=0;i<counter;i++){	
-		int blockAddress = get_blockAddress(input[i],offset);
-		if(cache[blockAddress % index] == -1){
-			cout << -1 << endl;
-			cache[blockAddress % index] = get_tag(input[i],offset,index_bits);
-		}
-		else if(cache[blockAddress % index] == get_tag(input[i],offset,index_bits))
-		{
-			cout << -1 << endl;			
-		}
-		else if(cache[blockAddress % index] != get_tag(input[i],offset,index_bits)){						
-			cout <<  std::dec << cache[blockAddress % index] << endl;
-			cache[blockAddress % index] = get_tag(input[i],offset,index_bits);
-		}
+	tag = 32 - offset - index_bits;
+	/*
+	cout << "Cache size is " << cache_size << endl;
+	cout << "Block_size is " << block_size << endl;
+	cout << "Associativity is " << associativity << endl;
+	cout << "Algorithm is " << algorithm << endl;
+	cout << "The index is " << index << endl;
+	cout << "The offset is " << offset << endl;
+	cout << "The index_bits is " << index_bits << endl;
+	cout << "The tag is " << tag << endl << endl;
+	*/
+	vector <int> cache [index];	
+	vector <int> checkBox;
+	 
+	if(associativity == 0 && algorithm == 0){ //directedMapped_FIFO		
+			for(int i=0;i<index;i++){		
+				cache[i].push_back(0);
+			}	
+			for(int i=0;i<counter;i++){	
+		
+				blockAddress = get_blockAddress(input[i],offset);
+				tagValue = get_tag(input[i],offset,index_bits);
+				blockNum = blockAddress % index;
+				if(cache[blockNum][0] == 0){
+					outFile << -1 << endl;
+					cache[blockNum][0] = tagValue;
+				}
+				else if(cache[blockNum][0] == tagValue){
+					outFile << -1 << endl;			
+				}
+				else if(cache[blockNum][0] != tagValue){						
+					outFile << cache[blockNum][0] << endl;
+					cache[blockNum][0] = tagValue;
+				}		 
+			}
 	}
-	
-	// //Print out for checking
-    // cout << cache_size << endl << block_size << endl << associativity << endl << algorithm << endl;
-	// for(int i=0;i<counter;i++){
-	// 	cout << std::bitset<32>(input[i]) << endl;
-	// }	
-	
-	inFile.close();	
-	return 0;	
 
+	if(associativity == 1 && algorithm == 0){ //4-way_FIFO
+
+	}
+		/* 
+			for(int i=0;i<index;i++){
+				cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);			
+			}
+			int blockAddress,tagValue,blockNum;
+			for(int i=0;i<counter;i++){
+				blockAddress = get_blockAddress(input[i],offset);
+				tagValue = get_tag(input[i],offset,index_bits);
+				blockNum = blockAddress % index;
+				for(int j=0;j<4;j++){
+					if(cache[blockNum][j] == 0){
+						cout << -1 for(int i=0;i<index;i++){		
+				cache[i].push_back(0);
+			}	
+
+			for(int i=0;i<counter;i++){	
+		
+				int blockAddress = get_blockAddress(input[i],offset);
+				int tagValue = get_tag(input[i],offset,index_bits);
+				int blockNum = blockAddress % index;
+				if(cache[blockNum][0] == 0){
+					cout << -1 << endl;
+					cache[blockNum][0] = tagValue;
+				}
+				else if(cache[blockNum][0] == tagValue){
+					cout << -1 << endl;			
+				}
+				else if(cache[blockNum][0] != tagValue){						
+					cout << cache[blockNum][0] << endl;
+					cache[blockNum][0] = tagValue;
+				}		 
+			}<< endl;
+						cache[blockNum][j] = tagValue;
+						goto end;
+					}										
+				}
+				for(int j=0;j<4;j++){
+					if(cache[blockNum][j] == tagValue){
+						cout << -1 << endl;
+						goto end;cout
+					}
+				}
+				for(int j=0;j<4;j++){					
+					if(cache[blockNum][j] != tagValue){
+						cout << cache[blockNum][j] << endl;
+						cache[blockNum][j] = tagValue;
+						goto end;
+					}
+				}				
+			}	
+		*/
+	if(associativity == 2 && algorithm == 0){ //Fully_FIFO
+		int kick_counter = 0,hit_counter=0,case_counter=0;
+		int blockNumber = cache_size / block_size;
+		int FIFO[blockNumber];
+		for(int i=0;i<blockNumber;i++)
+			FIFO[i] = 0; //use this array to determine which data is gonna replace
+		for(int i=0;i<blockNumber;i++){
+			cache[0].push_back(0); //initialize cache
+		}
+		for(int i=0;i<counter;i++){
+			tagValue = get_tag(input[i],offset,index_bits);
+			for(int j=0;j<blockNumber;j++){
+				if(cache[0][j] == tagValue){
+					outFile << -1 << endl;								
+					for(int n=0;n<j;n++)
+						FIFO[n]++;		
+					goto exit_FIFO;
+				}else if(cache[0][j] == 0){
+					outFile << -1 << endl;
+					cache[0][j] = tagValue;								
+					for(int n=0;n<j;n++)
+						FIFO[n]++;																
+					goto exit_FIFO;
+				}else{					
+					x = distance(FIFO, max_element(FIFO,FIFO + (sizeof(FIFO)/sizeof(int))));
+					outFile << cache[0][j] << endl;					
+					FIFO[x] = 0;													
+					for(int n=0;n<j;n++)
+						FIFO[n]++;	
+					cache[0][x] = tagValue;					
+				}	
+			}
+			exit_FIFO:;
+		}		
+	}
+	if(associativity == 2 && algorithm == 1){ //Fully_LRU
+			int blockNumber = cache_size / block_size;
+			int LRU[blockNumber];			
+			cout << "There got thse data : " << counter << endl;
+			for(int i=0;i<blockNumber;i++)
+				LRU[i] = 0; //use this array to determine which data is gonna replace
+			for(int i=0;i<blockNumber;i++){
+				cache[0].push_back(0); //initialize cache			
+			}
+			for(int i=0;i<counter;i++){				
+				tagValue = get_tag(input[i],offset,index_bits);
+				for(int j=0;j<blockNumber;j++){
+					if(cache[0][j] == tagValue){
+						outFile << -1 << endl;
+						LRU[j] = 0;
+						for(int n=0;n<j;n++)
+							LRU[n]++;
+						break;
+					}else if(cache[0][j] == 0){
+						outFile << -1 << endl;
+						cache[0][j] = tagValue;
+						for(int n=0;n<j;n++)
+							LRU[n]++;									
+						break;
+					}else{					
+						x = distance(LRU, max_element(LRU,LRU + (sizeof(LRU)/sizeof(int))));
+						outFile << cache[0][j] << endl;														
+						LRU[x] = 0;
+						for(int n=0;n<j;n++)
+							LRU[n]++;	
+						cache[0][x] = tagValue;		
+						break;			
+					}
+				}
+			}
+			
+		}				
+	inFile.close();	
+	outFile.close();
+	return 0;	
 }
 
 
