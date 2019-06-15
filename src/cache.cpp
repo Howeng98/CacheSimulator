@@ -52,8 +52,8 @@ int main(int argc,char *argv[]){
 
 	ifstream inFile;
 	ofstream outFile;
-	inFile.open("trace2.txt"); //./src/trace1.txt
-	outFile.open("trace2.out");
+	inFile.open("./src/trace2.txt"); //./src/trace1.txt
+	outFile.open("./src/trace2.out");
 	//Check for error
 	if(inFile.fail()){
 		cout << "Error Opening File" << endl;
@@ -167,8 +167,7 @@ int main(int argc,char *argv[]){
 				}				
 			}	
 		*/
-	if(associativity == 2 && algorithm == 0){ //Fully_FIFO
-		int kick_counter = 0,hit_counter=0,case_counter=0;
+	if(associativity == 2 && algorithm == 0){ //Fully_FIFO		
 		int blockNumber = cache_size / block_size;
 		int FIFO[blockNumber];
 		for(int i=0;i<blockNumber;i++)
@@ -204,31 +203,32 @@ int main(int argc,char *argv[]){
 	}
 	if(associativity == 2 && algorithm == 1){ //Fully_LRU
 			int blockNumber = cache_size / block_size;
-			int LRU[blockNumber];			
+			index_bits = 0;
+			int LRU[blockNumber];		
 			for(int i=0;i<blockNumber;i++)
 				LRU[i] = 0; //use this array to determine which data is gonna replace
-			for(int i=0;i<blockNumber;i++){
-				cache[0].push_back(0); //initialize cache			
-			}
+			for(int i=0;i<blockNumber;i++)
+				cache[0].push_back(0); //initialize cache						
 			for(int i=0;i<counter;i++){				
 				index = 0;
-				tagValue = get_tag(input[i],offset,index);
+				tagValue = get_tag(input[i],offset,index_bits);
 				for(int j=0;j<blockNumber;j++){
 					if(cache[0][j] == tagValue){
-						outFile << endl << -1;
+						result.push_back(-1);
+						cache[0][j] = tagValue;
 						LRU[j] = 0;
 						for(int n=0;n<j;n++)
 							LRU[n]++;
 						break;
 					}else if(cache[0][j] == 0){
-						outFile << endl << -1;
+						result.push_back(-1);
 						cache[0][j] = tagValue;
 						for(int n=0;n<j;n++)
-							LRU[n]++;									
+							LRU[n]++;								
 						break;
 					}else{					
 						x = distance(LRU, max_element(LRU,LRU + (sizeof(LRU)/sizeof(int))));
-						outFile << endl << cache[0][j] ;														
+						result[x] = cache[0][x];											
 						LRU[x] = 0;
 						for(int n=0;n<j;n++)
 							LRU[n]++;	
@@ -237,7 +237,13 @@ int main(int argc,char *argv[]){
 					}
 				}
 			}
-			
+			for(int i=0;i<result.max_size();i++){
+				if(i != result.max_size()-1)
+					outFile << result[i] << endl;
+				else
+					outFile << result[i];
+				
+			}
 		}				
 	inFile.close();	
 	outFile.close();
