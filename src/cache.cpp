@@ -42,6 +42,8 @@ int calculate_wordSet(int block_size){
 
 int printResult(vector<int> result,int size){
 	for(int i=0;i<size;i++){
+		//if(result[i] != -1)
+		//	cout << result[i] << endl;		
 		if(i != size -1)
 			outFile << result[i] << endl;
 		else
@@ -74,8 +76,8 @@ int main(int argc,char *argv[]){
 	double missRate=0;
 
 	
-	inFile.open("trace4.txt"); 
-	outFile.open("trace4.out");
+	inFile.open("./src/trace4.txt"); 
+	outFile.open("./src/trace4.out");
 	//Check for error
 	if(inFile.fail()){
 		cout << "Error Opening File" << endl;
@@ -94,7 +96,13 @@ int main(int argc,char *argv[]){
 	offset = calculate_wordSet(block_size); //WO + BO
 	index = cache_size / block_size;
 	tag = 32 - offset - index_bits;
-	
+	cout << "Cache_Size is : " << cache_size << endl;
+	cout << "Block_Size is : " << block_size << endl;
+	cout << "index is : " << index << endl;
+	cout << "index_bits is : " << index_bits << endl;
+	cout << "offset_bits is : " << offset << endl;
+	cout << "tag_bits is : " << tag << endl;
+
 	vector <unsigned> cache [index];
 
 	if(associativity == 0 && algorithm == 0){ //directedMapped_FIFO		
@@ -138,7 +146,7 @@ int main(int argc,char *argv[]){
 		for(int i=0;i<counter;i++){	
 			blockAddress = get_blockAddress(input[i],offset);
 			tagValue = get_tag(input[i],offset,index_bits);
-			blockNum = blockAddress % index;	
+			blockNum = blockAddress % index;			 
 			for(int columnNumber = 0;columnNumber < 4;columnNumber++){
 				if(tagValue == cache[blockNum][columnNumber]){
 					result.push_back(-1);
@@ -151,6 +159,7 @@ int main(int argc,char *argv[]){
 					goto exit_4way_FIFO;
 				}
 			}
+			
 			for(int columnNumber = 0;columnNumber < 4;columnNumber++){
 				if(cache[blockNum][columnNumber] == 0){
 					result.push_back(-1);
@@ -163,6 +172,7 @@ int main(int argc,char *argv[]){
 					goto exit_4way_FIFO;
 				}
 			}
+			
 			{
 				largest = distance(FIFO, max_element(FIFO,FIFO + (sizeof(FIFO)/sizeof(int))));
 				result.push_back(cache[blockNum][largest]);
@@ -173,6 +183,7 @@ int main(int argc,char *argv[]){
 						FIFO[num]++;
 				}
 				goto exit_4way_FIFO;
+				
 			}
 			exit_4way_FIFO:;
 		}
