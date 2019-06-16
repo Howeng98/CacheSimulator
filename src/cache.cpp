@@ -76,8 +76,8 @@ int main(int argc,char *argv[]){
 	double missRate=0;
 
 	
-	inFile.open("./src/trace4.txt"); 
-	outFile.open("./src/trace4.out");
+	inFile.open("trace4.txt"); 
+	outFile.open("trace4.out");
 	//Check for error
 	if(inFile.fail()){
 		cout << "Error Opening File" << endl;
@@ -85,16 +85,16 @@ int main(int argc,char *argv[]){
 	}
 
 	inFile >> cache_size >> block_size >> associativity >> algorithm;
-	cache_size = cache_size * 1024;
+	cache_size = cache_size * 1024;	
 	while(!inFile.eof()){
 		inFile >> data;		  
 		input.push_back(stoull(data,nullptr,0));
 		counter++;		
 	}
 	//Initial
-	index_bits = calculate_index(cache_size,block_size);
+	index_bits = calculate_index(cache_size,(block_size*4));
 	offset = calculate_wordSet(block_size); //WO + BO
-	index = cache_size / block_size;
+	index = cache_size / (block_size*4);
 	tag = 32 - offset - index_bits;
 	cout << "Cache_Size is : " << cache_size << endl;
 	cout << "Block_Size is : " << block_size << endl;
@@ -102,98 +102,82 @@ int main(int argc,char *argv[]){
 	cout << "index_bits is : " << index_bits << endl;
 	cout << "offset_bits is : " << offset << endl;
 	cout << "tag_bits is : " << tag << endl;
-
-	vector <unsigned> cache [index];
-
-	if(associativity == 0 && algorithm == 0){ //directedMapped_FIFO		
+	cout << "Associative is : " << associativity << endl;
+	cout << "Algorithm is : " << algorithm << endl;
+	vector <unsigned> cache [index];	
+	
+	if(associativity == 0 && (algorithm == 0 || algorithm == 1 || algorithm == 2)){ //directedMapped_FIFO		
 			for(int i=0;i<index;i++){		
 				cache[i].push_back(0);
-			}				
+			}		
 			for(int i=0;i<counter;i++){	
 		
 				blockAddress = get_blockAddress(input[i],offset);
 				tagValue = get_tag(input[i],offset,index_bits);
-				blockNum = blockAddress % index;				
+				blockNum = blockAddress % index;			
 				if(cache[blockNum][0] == tagValue){
 					result.push_back(-1);
 					cache[blockNum][0] = tagValue;
+					goto exit_direct_FIFO;
 				}
-				else if(cache[blockNum][0] == 0){
+				if(cache[blockNum][0] == 0){
 					result.push_back(-1);
-					cache[blockNum][0] = tagValue;			
+					cache[blockNum][0] = tagValue;
+					goto exit_direct_FIFO;			
 				}
-				else if(cache[blockNum][0] != tagValue){						
+				if(cache[blockNum][0] != tagValue){						
 					result.push_back(cache[blockNum][0]);
 					cache[blockNum][0] = tagValue;
+					goto exit_direct_FIFO;
 				}				
-				
+				exit_direct_FIFO:;	
 			}
-			for(int i=0;i<result.size();i++){
-				if(i != result.size() -1)
-					outFile << result[i] << endl;
-				else
-					outFile << result[i];				
-			}
-	} //end directedMapped_FIFO
-	///////////////////////////////////////////////////////////////////////////////////////////
+		printResult(result,result.size());				
+	} //end directedMapped_FIFO	
+	
 	/////////////////////////////////Algorithm要記得改回去/////////////////////////////////////////////	
 	///////////////////////////////////////////////////////////////////////////////////////////
-	if(associativity == 1 && (algorithm == 0 || algorithm == 2)){ //4-way_FIFO or LRU
-		int FIFO[4] = {0};
-		for(int i=0;i<index;i++){		
-			cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);
+	if(associativity == 1){ //4-way	
+		for(int i=0;i<index;i++){
+			cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);			
 		}
 		for(int i=0;i<counter;i++){	
+			largest = 0;
 			blockAddress = get_blockAddress(input[i],offset);
 			tagValue = get_tag(input[i],offset,index_bits);
 			blockNum = blockAddress % index;			 
 			for(int columnNumber = 0;columnNumber < 4;columnNumber++){
 				if(tagValue == cache[blockNum][columnNumber]){
 					result.push_back(-1);
-					//if(algorithm == 2) // algorithm == 1 == LRU            ///////////////這裏也是
-					//	FIFO[columnNumber] = 0;
-					for(int num = 0;num < 4;num++){
-						if(cache[blockNum][num] != 0)
-							FIFO[num]++;
+					if(algorithm != 0){ //Only LRI need to reset position, otherwise FIFO no need
+						cache[blockNum].erase(cache[blockNum].begin()+columnNumber);							
+						cache[blockNum].push_back(tagValue);
 					}
 					goto exit_4way_FIFO;
 				}
 			}
-			
-			for(int columnNumber = 0;columnNumber < 4;columnNumber++){
+			for(int columnNumber = 0;columnNumber < 4;columnNumber++){				
 				if(cache[blockNum][columnNumber] == 0){
 					result.push_back(-1);
 					cache[blockNum][columnNumber] = tagValue;
-					FIFO[columnNumber] = 0;
-					for(int num = 0;num < 4;num++){
-						if(cache[blockNum][num] != 0)
-							FIFO[num]++;
-					}
 					goto exit_4way_FIFO;
-				}
+				}				
+			}
+			{				
+				result.push_back(cache[blockNum][0]);				
+				cache[blockNum].erase(cache[blockNum].begin());
+				cache[blockNum].push_back(tagValue);																				
 			}
 			
-			{
-				largest = distance(FIFO, max_element(FIFO,FIFO + (sizeof(FIFO)/sizeof(int))));
-				result.push_back(cache[blockNum][largest]);
-				cache[blockNum][largest] = tagValue;
-				FIFO[largest] = 0;
-				for(int num = 0;num < 4;num++){
-					if(cache[blockNum][num] != 0)
-						FIFO[num]++;
-				}
-				goto exit_4way_FIFO;
-				
-			}
 			exit_4way_FIFO:;
-		}
+		}		
 		printResult(result,result.size());
 	} //end 4way_FIFO
-
-	if(associativity == 2 && (algorithm == 0 || algorithm == 1)){ //Fully_LRU
+	
+	if(associativity == 2 && (algorithm == 1 || algorithm == 2)){ //Fully_LRU
 			int blockNumber = cache_size / block_size;
 			index_bits = 0;
-			int LRU[blockNumber];		
+			int LRU[blockNumber];	
 			for(int i=0;i<blockNumber;i++)
 				LRU[i] = 0; //use this array to determine which data is gonna replace
 			for(int i=0;i<blockNumber;i++)
@@ -240,7 +224,8 @@ int main(int argc,char *argv[]){
 				exit_LRU:;
 			}
 			printResult(result,result.size());
-	}	//end Fully_LRU			
+	}	//end Fully_LRU	
+			
 	inFile.close();	
 	outFile.close();
 	cout << "Finish" << endl;
