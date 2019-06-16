@@ -73,17 +73,15 @@ int main(int argc,char *argv[]){
 	int associativity,algorithm;
 	int tag,index,offset,index_bits;
 	int blockAddress,tagValue,blockNum;	
-	double missRate=0;
-
 	
-	inFile.open("trace4.txt"); 
-	outFile.open("trace4.out");
+	inFile.open(argv[1]); 
+	outFile.open(argv[2]);
 	//Check for error
 	if(inFile.fail()){
 		cout << "Error Opening File" << endl;
 		exit(1);
 	}
-
+	
 	inFile >> cache_size >> block_size >> associativity >> algorithm;
 	cache_size = cache_size * 1024;	
 	while(!inFile.eof()){
@@ -92,10 +90,25 @@ int main(int argc,char *argv[]){
 		counter++;		
 	}
 	//Initial
-	index_bits = calculate_index(cache_size,(block_size*4));
-	offset = calculate_wordSet(block_size); //WO + BO
-	index = cache_size / (block_size*4);
-	tag = 32 - offset - index_bits;
+	if(associativity == 0){ //directedMapped
+		index_bits = calculate_index(cache_size,block_size);
+		offset = calculate_wordSet(block_size);
+		index = cache_size / block_size;
+		tag = 32 - offset - index_bits;
+	}
+	else if(associativity == 1){ //4-Way
+		index_bits = calculate_index(cache_size,(block_size*4));
+		offset = calculate_wordSet(block_size);
+		index = cache_size / (block_size*4);
+		tag = 32 - offset - index_bits;
+	}
+	else if(associativity == 2){
+		index_bits = 0; //2^0 = 1(1set)
+		offset = calculate_wordSet(block_size);
+		index = 2^(index_bits);
+		tag = 32 - offset - index_bits;
+	}
+	
 	cout << "Cache_Size is : " << cache_size << endl;
 	cout << "Block_Size is : " << block_size << endl;
 	cout << "index is : " << index << endl;
@@ -135,8 +148,6 @@ int main(int argc,char *argv[]){
 		printResult(result,result.size());				
 	} //end directedMapped_FIFO	
 	
-	/////////////////////////////////Algorithm要記得改回去/////////////////////////////////////////////	
-	///////////////////////////////////////////////////////////////////////////////////////////
 	if(associativity == 1){ //4-way	
 		for(int i=0;i<index;i++){
 			cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);cache[i].push_back(0);			
@@ -174,51 +185,35 @@ int main(int argc,char *argv[]){
 		printResult(result,result.size());
 	} //end 4way_FIFO
 	
-	if(associativity == 2 && (algorithm == 1 || algorithm == 2)){ //Fully_LRU
-			int blockNumber = cache_size / block_size;
-			index_bits = 0;
-			int LRU[blockNumber];	
-			for(int i=0;i<blockNumber;i++)
-				LRU[i] = 0; //use this array to determine which data is gonna replace
+	if(associativity == 2){ //Fully
+			int blockNumber = cache_size / block_size;			
 			for(int i=0;i<blockNumber;i++)
 				cache[0].push_back(0); //initialize cache						
 			for(int i=0;i<counter;i++){							
-				tagValue = get_tag(input[i],offset,index_bits);
-				
-				for(int k=0;k<blockNumber;k++){
-					if(tagValue == cache[0][k]){
+				tagValue = get_tag(input[i],offset,index_bits);								
+				for(int columnNumber = 0;columnNumber < blockNumber;columnNumber++){
+					if(tagValue == cache[0][columnNumber]){
 						result.push_back(-1);
-						if(algorithm == 1) //algorithm == 1 == LRU
-							LRU[k] = 0;
-						for(int num = 0;num < blockNumber;num++){
-							if(cache[0][num] != 0)
-								LRU[num]++;
+						if(algorithm != 0){
+							cache[0].erase(cache[0].begin()+columnNumber);							
+							cache[0].push_back(tagValue);
 						}
 						goto exit_LRU;
 					}
 				}
-				for(int k=0;k<blockNumber;k++){
-					if(cache[0][k] == 0){
+				
+				for(int columnNumber = 0;columnNumber < blockNumber;columnNumber++){				
+					if(cache[0][columnNumber] == 0){
 						result.push_back(-1);
-						cache[0][k] = tagValue;
-						LRU[k] = 0;
-						for(int num = 0;num < blockNumber;num++){
-							if(cache[0][num] != 0)
-								LRU[num]++;
-						}
+						cache[0][columnNumber] = tagValue;
 						goto exit_LRU;
-					}
+					}				
 				}				
-				{						
-					largest = distance(LRU, max_element(LRU,LRU + (sizeof(LRU)/sizeof(int))));
-					result.push_back(cache[0][largest]);
-					cache[0][largest] = tagValue;
-					LRU[largest] = 0;
-					for(int num = 0;num < blockNumber;num++){
-						if(cache[0][num] != 0)
-							LRU[num]++;
-					}
-					goto exit_LRU;
+				
+				{			
+					result.push_back(cache[0][0]);				
+					cache[0].erase(cache[0].begin());
+					cache[0].push_back(tagValue);							
 				}																										
 				
 				exit_LRU:;
