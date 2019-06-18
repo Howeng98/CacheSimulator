@@ -116,25 +116,29 @@ int main(int argc,char *argv[]){
 				cache[i].push_back(0);
 			}		
 			for(int i=0;i<counter;i++){	
-		
+				
 				blockAddress = get_blockAddress(input[i],offset);
 				tagValue = get_tag(input[i],offset,index_bits);
 				blockNum = blockAddress % index;			
+
+				//cout << "Tag Value is  : " << tagValue << " Block Number : " << blockNum <<endl;
+
 				if(cache[blockNum][0] == tagValue){
 					result.push_back(-1);
 					cache[blockNum][0] = tagValue;
 					goto exit_direct_FIFO;
 				}
-				if(cache[blockNum][0] == 0){
+				else if(cache[blockNum][0] == 0){
 					result.push_back(-1);
 					cache[blockNum][0] = tagValue;
 					goto exit_direct_FIFO;			
 				}
-				if(cache[blockNum][0] != tagValue){						
+				else if(cache[blockNum][0] != tagValue){						
 					result.push_back(cache[blockNum][0]);
 					cache[blockNum][0] = tagValue;
 					goto exit_direct_FIFO;
-				}				
+				}		
+					
 				exit_direct_FIFO:;	
 			}
 		printResult(result,result.size());				
